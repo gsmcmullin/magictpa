@@ -64,6 +64,11 @@ class TPACapture(threading.Thread, TPADecoder):
 		TPADecoder.register_opcode(self, code, mask, op_proxy, *args)
 		self.lock.release()
 
+	def unregister_opcode(self, code, mask):
+		self.lock.acquire()
+		TPADecoder.unregister_opcode(self, code, mask)
+		self.lock.release()
+
 	def run(self):
 		while True:
 			try:

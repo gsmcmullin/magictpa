@@ -33,6 +33,13 @@ class TPADecoder(object):
 	def register_opcode(self, code, mask, func, *args):
 		self._opcodes.append((code, mask, func, args))
 
+	def unregister_opcode(self, code, mask):
+		for i in range(len(self._opcodes)):
+			if ((self._opcodes[i][0] == code) and 
+			    (self._opcodes[i][1] == mask)):
+				del self._opcodes[i]
+				return
+
 	def decode(self, s):
 		for c in s:
 			self.decode_byte(c)

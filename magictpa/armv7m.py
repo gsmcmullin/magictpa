@@ -30,8 +30,9 @@ class ARMv7M(object):
 		self.TPIU = TPIU(self._inf)
 		self.ITM = ITM(self._inf)
 		self.DBGMCU = DBGMCU(self._inf)
+		self.capture = None
 	
-	def trace_init(self):
+	def trace_init(self, capture):
 		"""Enable trace port in Manchester mode"""
 		self.TPIU.SPPR = TPIU_SPPR_ASYNC_MANCHESTER
 		self.TPIU.ACPR = 0x0010
@@ -43,6 +44,7 @@ class ARMv7M(object):
 		)
 
 		self.ITM.TCR = ITM_TCR_ITMENA | ITM_TCR_TXENA
+		self.capture = capture
 
 	def trace_time(self, enable=True):
 		if enable:
@@ -51,19 +53,58 @@ class ARMv7M(object):
 			self.ITM.TCR &= ~ITM_TCR_TSENA
 
 	def watch(self, addr, size, func):
+		return TraceWatch(self, addr, size, func)
+
+
+class TraceWatch(object):
+	def __init__(self, dev, addr, size, func):
 		"""Find and set up a watchpoint comparator"""
 		found = None
-		for i in range(0, self.DWT.numcomp):
-			if self.DWT.FUNC[i] & 0xF == 0: 
+		for i in range(0, dev.DWT.numcomp):
+			if dev.DWT.FUNC[i] & 0xF == 0: 
 				found = i
 				break
 		if found is None:
-			return
+			raise gdb.GdbError("no watchpoint units available")
 
-		self.DWT.COMP[found] = addr
-		self.DWT.MASK[found] = size - 1
-		self.DWT.FUNC[found] = func
-		return found
+		self._addr = addr
+		self._size = size
+		self._wp = found
+
+		dev.DWT.COMP[found] = addr
+		dev.DWT.MASK[found] = size - 1
+		dev.DWT.FUNC[found] = func
+
+		self._dev = dev
+		self._wp_pc = {}
+		
+	def connect(self, callback):
+		cap = self._dev.capture
+		if callback:
+			cap.register_opcode(0x80 | (self._wp << 4), 0xF0,
+					self._trigger)
+			cap.register_opcode(0x47 | (self._wp << 4), 0xFF,
+					self._pcsample)
+			self._callback = callback
+		else:
+			cap.unregister_opcode(0x80 | (self._wp << 4), 0xF0)
+			cap.unregister_opcode(0x47 | (self._wp << 4), 0xFF)
+
+	def _pcsample(self, dec, op, value):
+		self._wp_pc[(op >> 4) & 3] = value
+
+	def _trigger(self, dec, op, value):
+		wp = (op >> 4) & 3
+		pc = self._wp_pc.get(wp, None)
+		action = 'write' if op & 0x8 else 'read'
+		self._callback(self, None, action, value, pc)
+
+	def __str__(self):
+		return ("WP comparator %d for addr 0x%X, size %d" %
+			(self._wp, self._addr, self._size))
+
+	def __del__(self):
+		self._dev.DWT.FUNC[self._wp] = 0
 
 
 def inferior_read_reg(inferior, addr):
