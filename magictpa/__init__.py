@@ -54,11 +54,17 @@ class CommandTpa(gdb.Command):
 			prefix=True)
 tpacmd = CommandTpa()
 
-#class ParameterTpa(gdb.Parameter):
-#	def __init__(self):
-#		gdb.Parameter.__init__(self, "tpa", gdb.COMMAND_SUPPORT, 
-#			gdb.PARAM_BOOLEAN)
-#tpaparam = ParameterTpa()
+class ParameterTpaSpeed(gdb.Parameter):
+	def __init__(self):
+		gdb.Parameter.__init__(self, "tpaspeed", gdb.COMMAND_SUPPORT, 
+			gdb.PARAM_ZINTEGER)
+		self.value = 0x0010
+	def get_set_string(self):
+		cm3.TPIU.ACPR = self.value
+		return "TPA Speed is now 0x%04X" % self.value
+	def get_show_string(self, svalue):
+		return "TPA Speed is 0x%04X" % self.value
+tpa_speed = ParameterTpaSpeed()
 
 class ParameterTpaRawFile(gdb.Parameter):
 	"""TPA raw logfile"""
@@ -105,7 +111,7 @@ class ParameterTpaGate(gdb.Parameter):
 				capture.resume()
 		return "TPA capture is " + ("gated" if self.value else "not gated")
 
-	def get_show_string(self):
+	def get_show_string(self, svalue):
 		return "TPA capture is " + ("gated" if self.value else "not gated")
 
 	def cont_handler(self, event):
