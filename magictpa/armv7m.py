@@ -51,6 +51,7 @@ class ARMv7M(object):
 			self.ITM.TCR |= ITM_TCR_TSENA
 		else:
 			self.ITM.TCR &= ~ITM_TCR_TSENA
+		self.capture.hold_for_time(enable)
 
 	def watch(self, addr, size, func):
 		return TraceWatch(self, addr, size, func)
@@ -97,7 +98,7 @@ class TraceWatch(object):
 		wp = (op >> 4) & 3
 		pc = self._wp_pc.get(wp, None)
 		action = 'write' if op & 0x8 else 'read'
-		self._callback(self, None, action, value, pc)
+		self._callback(self, "%.6f" % dec.time, action, value, pc)
 
 	def __str__(self):
 		return ("WP comparator %d for addr 0x%X, size %d" %
