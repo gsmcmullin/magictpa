@@ -1,0 +1,34 @@
+Black Magic Trace Extention for GDB (MagicTPA)
+Copyright (C) 2012  Black Sphere Technologies Ltd.
+
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+
+This is an experimental extension to GDB providing trace support on ARM
+Cortex-M microcontrollers with the Black Magic Probe.  It is still very
+experimental and may not be useful.  It is provided for the brave ones
+who are keen to hack at it and improve it.
+
+For firmware support get the 'traceswo' branch from:
+https://github.com/gsmcmullin/blackmagic.git
+
+To install, copy the magictpa directory from here to your GDB python 
+directory '<prefix>/share/gdb/python'. 
+
+To load the extension from GDB, use the command 'python import magictpa'.
+The correct sequence must be followed:
+### .gdbinit example ###
+set target-async on
+set mem inaccessible-by-default off
+target extended-remote ...
+monitor swdp_scan
+attach 1
+python import magictpa
+### end of example ###
+
+The following GDB commands are added by the module to provide trace:
+set tpagate (on|off) -- Only process trace events when the target is running.
+set tparawfile <file> -- Record raw (binary) trace stream to a file.
+set tpatime (off|host|delta) -- Timestamping to use for recording events.
+tpa watch <var> [pc] -- Trace changes to variable.
+tpa delete <n> -- Remove trace source <n>.
+
