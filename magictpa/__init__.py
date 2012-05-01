@@ -165,6 +165,7 @@ class CommandTpaWatch(gdb.Command):
 		self.watches = {}
 
 	def trigger(self, wp, time, action, value, pc):
+		value = gdb.Value(value).cast(wp.vartype)
 		if pc:
 			sal = gdb.decode_line("*" + hex(pc))[1][0]
 			pc = "%s:%d" % (sal.symtab.filename, sal.line)
@@ -172,7 +173,7 @@ class CommandTpaWatch(gdb.Command):
 			pc = ''
 		if tpa_time.value == 'off':
 			time = ''
-		action = "%5s %s=%d" % (action, self.varname, value)
+		action = "%5s %s=%d" % (action, wp.varname, value)
 		print "%s %-25s %s" % (time, action, pc)
 
 	def invoke(self, args, from_tty):
@@ -192,6 +193,7 @@ class CommandTpaWatch(gdb.Command):
 		wp = cm3.watch(addr, size, 0x03 if samplepc else 0x02)
 		wp.connect(self.trigger)
 		wp.varname = argv[0]
+		wp.vartype = val.type
 		self.watches[self.nextwatch] = wp
 		print "%d:%s" % (self.nextwatch, wp)
 		self.nextwatch += 1
