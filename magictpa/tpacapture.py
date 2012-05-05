@@ -20,18 +20,29 @@ import gdb
 import usb.core
 import usb.util
 import threading
+import sys
 
 from tpadecoder import TPADecoder
 
 def printopcode(dec, opcode, param, s):
 	print s
 
+def check_serial(dev, serial): 
+	if not dev.iSerialNumber:
+		return False
+
+	if sys.platform == 'darwin':
+		return True
+
+	s = usb.util.get_string(dev, 8, dev.iSerialNumber)
+	return s == serial
+
 class TPACapture(threading.Thread, TPADecoder):
 	def __init__(self, serial, ifno, epno):
 		threading.Thread.__init__(self)
 		TPADecoder.__init__(self)
 		self.dev = usb.core.find(idVendor=0x0483, idProduct=0x5740,
-			custom_match=lambda d: usb.util.get_string(d, 8, d.iSerialNumber) == serial
+			custom_match=lambda d: check_serial(d, serial)
 		)
 		config = self.dev[0]
 		iface = tuple(config)[ifno]
