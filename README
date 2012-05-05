@@ -27,6 +27,8 @@ python import magictpa
 
 The following GDB commands are added by the module to provide trace:
 set tpa speed <speed> -- Sets the trace port speed.  Written to TPIU_ACPR on target.
+set tpa log <file> -- Record decoded trace events to <file>
+set tpa echo (on|off) -- Write decoded trace events to stdout when logging.
 set tpa gate (on|off) -- Only process trace events when the target is running.
 set tpa rawfile <file> -- Record raw (binary) trace stream to a file.
 set tpa time (off|host|delta) -- Timestamping to use for recording events.
