@@ -98,7 +98,11 @@ class TraceWatch(object):
 		wp = (op >> 4) & 3
 		pc = self._wp_pc.get(wp, None)
 		action = 'write' if op & 0x8 else 'read'
-		self._callback(self, "%.6f" % dec.time, action, value, pc)
+		if type(dec.time) is float:
+			time = "%.6f" % dec.time
+		else:
+			time = str(dec.time)
+		self._callback(self, time, action, value, pc)
 
 	def __str__(self):
 		return ("WP comparator %d for addr 0x%X, size %d" %
