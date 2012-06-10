@@ -56,6 +56,29 @@ class ARMv7M(object):
 	def watch(self, addr, size, func):
 		return TraceWatch(self, addr, size, func)
 
+	def _exc_trace(self, dec, value, cb):
+		fnnames = {1:"entered", 2:"exited", 3:"returned to"}
+		exc = value & 0x1ff
+		fn = (value >> 12) & 3
+		if type(dec.time) is float:
+			time = "%.6f" % dec.time
+		else:
+			time = str(dec.time)
+		cb(time, fnnames[fn], exc)
+		
+	def trace_exc(self, callback):
+		if callback is None:
+			self.DWT.CTRL &= ~DWT_CTRL_EXCTRCENA
+			self.capture.unregister_opcode(0x0E, 0xFF)
+			return
+
+		if not callable(callback):
+			raise TypeError("Callback must be callable")
+
+		self.DWT.CTRL |= DWT_CTRL_EXCTRCENA
+		self.capture.register_opcode(0x0E, 0xFF, 
+				lambda d, o, v: self._exc_trace(d, v, callback))
+		
 
 class TraceWatch(object):
 	def __init__(self, dev, addr, size, func):
@@ -191,6 +214,7 @@ class DWT(MMIO):
 		self.numcomp = self.CTRL >> 28;
 
 # DWT bit definitions
+DWT_CTRL_EXCTRCENA = 0x10000
 DWT_MASK_BYTE = 0x0
 DWT_MASK_HALFWORD = 0x1
 DWT_MASK_WORD = 0x3

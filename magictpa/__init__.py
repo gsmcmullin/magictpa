@@ -208,6 +208,22 @@ class ParameterTpaLog(gdb.Parameter):
 			gdb.write(event)
 tpa_log = ParameterTpaLog()
 
+class ParameterTpaTraceExceptions(gdb.Parameter):
+	def __init__(self):
+		gdb.Parameter.__init__(self, "tpa trace-exceptions", 
+			gdb.COMMAND_SUPPORT, gdb.PARAM_BOOLEAN)
+	def _trigger(self, time, action, value):
+		tpa_log.write("%s %d\n" % (action, value))
+
+	def get_set_string(self):
+		if self.value:
+			cm3.trace_exc(self._trigger)
+			return "Exception tracing is now on"
+		else:
+			cm3.trace_exc(None)
+			return "Exception tracing is now off"
+tpa_traceexc= ParameterTpaTraceExceptions()
+
 class CommandTpaWatch(gdb.Command):
 	"""Trace a program variable"""
 	def __init__(self):
