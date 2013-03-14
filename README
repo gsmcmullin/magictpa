@@ -8,11 +8,13 @@ Cortex-M microcontrollers with the Black Magic Probe.  It is still very
 experimental and may not be useful.  It is provided for the brave ones
 who are keen to hack at it and improve it.
 
-For firmware support get the 'traceswo' branch from:
+Firmware support is provided by the Black Magic Probe:
 https://github.com/gsmcmullin/blackmagic.git
 
-To install, copy the magictpa directory from here to your GDB python 
-directory '<prefix>/share/gdb/python'. 
+To install, copy the magictpa directory from here to your GDB python
+directory '<prefix>/share/gdb/python'.  MagicTPA can be tried out and
+worked on without installing by adding the repo directory to your
+PYTHONPATH environment variable.
 
 To load the extension from GDB, use the command 'python import magictpa'.
 The correct sequence must be followed:
