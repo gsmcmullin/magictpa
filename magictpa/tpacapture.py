@@ -40,6 +40,7 @@ def check_serial(dev, serial):
 class TPACapture(threading.Thread, TPADecoder):
 	def __init__(self, serial, ifno, epno):
 		threading.Thread.__init__(self)
+		self.daemon = True
 		TPADecoder.__init__(self)
 		self.dev = usb.core.find(idVendor=0x1d50, idProduct=0x6018,
 			custom_match=lambda d: check_serial(d, serial)
