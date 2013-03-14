@@ -39,7 +39,7 @@ class TPADecoder(object):
 
 	def unregister_opcode(self, code, mask):
 		for i in range(len(self._opcodes)):
-			if ((self._opcodes[i][0] == code) and 
+			if ((self._opcodes[i][0] == code) and
 			    (self._opcodes[i][1] == mask)):
 				del self._opcodes[i]
 				return

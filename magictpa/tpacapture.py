@@ -27,7 +27,7 @@ from tpadecoder import TPADecoder
 def printopcode(dec, opcode, param, s):
 	print s
 
-def check_serial(dev, serial): 
+def check_serial(dev, serial):
 	if not dev.iSerialNumber:
 		return False
 
@@ -63,7 +63,7 @@ class TPACapture(threading.Thread, TPADecoder):
 		self.lock.acquire()
 		self._pause = True
 		self.lock.release()
-		
+
 	def resume(self):
 		self.lock.acquire()
 		self._pause = False
@@ -94,4 +94,4 @@ class TPACapture(threading.Thread, TPADecoder):
 				self.rawfile.flush()
 			self.decode(data)
 			self.lock.release()
-	
+
