@@ -95,3 +95,9 @@ class TPACapture(threading.Thread, TPADecoder):
 			self.decode(data)
 			self.lock.release()
 
+# Enable SWO capture and start capture/decoder thread
+serial, ifno, epno = gdb.execute("monitor traceswo", False, True).split(':')
+capture = TPACapture(serial, int(ifno, 16), int(epno, 16))
+capture.start()
+del serial, ifno, epno
+

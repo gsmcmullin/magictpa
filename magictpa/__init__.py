@@ -17,8 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gdb
-import magictpa.armv7m
-import magictpa.tpacapture
 
 print "Black Magic Trace Extention for GDB (MagicTPA) - 0.1"
 print "Copyright (C) 2012  Black Sphere Technologies Ltd."
@@ -33,42 +31,15 @@ if gdb.parameter("mem inaccessible-by-default"):
 if not gdb.parameter("target-async"):
 	raise gdb.GdbError("Please add 'set target-async on' to your .gdbinit")
 
-# Enable SWO capture and start capture/decoder thread
-#try:
-if True:
-	serial, ifno, epno = gdb.execute("monitor traceswo", False, True).split(':')
-	capture = magictpa.tpacapture.TPACapture(serial, int(ifno, 16), int(epno, 16))
-	capture.start()
-#except:
-#	raise gdb.GdbError("Failed to initialise SWO capture.  Is it supported by the target?")
+import magictpa.armv7m
+from magictpa.tpacapture import capture
+from magictpa.tpacommands import tpa_log
 
 # We really need to do this when notified of a new inforior.
 # This functionality doesn't yet exist in GDB.
 inferior = gdb.selected_inferior()
 cm3 = magictpa.armv7m.ARMv7M(inferior)
 cm3.trace_init(capture)
-
-class CommandTpa(gdb.Command):
-	"""Commands for controling trace port analysis."""
-	def __init__(self):
-		gdb.Command.__init__(self, "tpa", gdb.COMMAND_SUPPORT, 
-			prefix=True)
-tpacmd = CommandTpa()
-
-# These command 'set tpa' and 'show tpa' are needed for the parameters
-# below to be accepted by GDB.
-class CommandSetTpa(gdb.Command):
-	"""Set parameters for trace port analysis."""
-	def __init__(self):
-		gdb.Command.__init__(self, "set tpa", gdb.COMMAND_SUPPORT, 
-			prefix=True)
-CommandSetTpa()
-class CommandShowTpa(gdb.Command):
-	"""Show parameters for trace port analysis."""
-	def __init__(self):
-		gdb.Command.__init__(self, "show tpa", gdb.COMMAND_SUPPORT, 
-			prefix=True)
-CommandShowTpa()
 
 class ParameterTpaSpeed(gdb.Parameter):
 	def __init__(self):
@@ -83,27 +54,6 @@ class ParameterTpaSpeed(gdb.Parameter):
 	def get_show_string(self, svalue):
 		return "TPA Speed is 0x%04X" % self.value
 tpa_speed = ParameterTpaSpeed()
-
-class ParameterTpaRawFile(gdb.Parameter):
-	"""TPA raw logfile"""
-	def __init__(self):
-		self.set_doc = "Record raw (binary) trace stream to a file."
-		self.show_doc = "File raw (binary) trace stream is captured to."
-		gdb.Parameter.__init__(self, "tpa rawfile", gdb.COMMAND_SUPPORT, 
-			gdb.PARAM_OPTIONAL_FILENAME)
-	def get_set_string(self):
-		capture.set_rawfile(self.value)
-		if self.value:
-			return "Logging trace stream to %s." % self.value
-		else:
-			return "Not logging trace stream."
-	def get_show_string(self, svalue):
-		if self.value:
-			return "Logging trace stream to %s." % self.value
-		else:
-			return "Not logging trace stream."
-tpa_rawfile = ParameterTpaRawFile()
-
 
 class ParameterTpaTime(gdb.Parameter):
 	"""Valid options are 'off', 'host', or 'delta'.
@@ -125,88 +75,6 @@ class ParameterTpaTime(gdb.Parameter):
 
 		return ""
 tpa_time = ParameterTpaTime()
-
-class ParameterTpaGate(gdb.Parameter):
-	def __init__(self):
-		self.set_doc = "Gate TPA while target halted"
-		self.show_doc = "Gate TPA while target halted"
-		gdb.Parameter.__init__(self, "tpa gate", gdb.COMMAND_SUPPORT, 
-			gdb.PARAM_BOOLEAN)
-		gdb.events.cont.connect(self.cont_handler)
-		gdb.events.stop.connect(self.stop_handler)
-		self.running = False
-		self.value = True
-
-	def get_set_string(self):
-		if not self.running:
-			if self.value:
-				capture.pause()
-			else:
-				capture.resume()
-		return "TPA capture is " + ("gated" if self.value else "not gated")
-
-	def get_show_string(self, svalue):
-		return "TPA capture is " + ("gated" if self.value else "not gated")
-
-	def cont_handler(self, event):
-		self.running = True
-		capture.resume()
-	def stop_handler(self, event):
-		self.running = False 
-		if self.value:
-			capture.pause()
-tpa_gate = ParameterTpaGate()
-
-class ParameterTpaEcho(gdb.Parameter):
-	"""Echo decoded trace to stdout"""
-	def __init__(self):
-		self.set_doc = "Echo decoded trace to stdout"
-		self.show_doc = "Echo decoded trace to stdout"
-		gdb.Parameter.__init__(self, "tpa echo", gdb.COMMAND_SUPPORT, 
-			gdb.PARAM_BOOLEAN)
-	def get_set_string(self):
-		if self.value:
-			return "Trace written to stdout"
-		else:
-			return "Trace not written to stdout"
-	def get_show_string(self, svalue):
-		if self.value:
-			return "Trace written to stdout"
-		else:
-			return "Trace not written to stdout"
-tpa_echo = ParameterTpaEcho()
-
-class ParameterTpaLog(gdb.Parameter):
-	"""TPA logfile"""
-	def __init__(self):
-		self.set_doc = "Record decoded trace stream to a file."
-		self.show_doc = "File decoded trace stream is captured to."
-		gdb.Parameter.__init__(self, "tpa log", gdb.COMMAND_SUPPORT, 
-			gdb.PARAM_OPTIONAL_FILENAME)
-		self.logfile = None
-	def get_set_string(self):
-		if self.logfile:
-			self.logfile.flush()
-		if self.value:
-			self.logfile = open(self.value, "a")
-			self.write("TPA logfile opened\n");
-
-		if self.value:
-			return "Logging trace stream to %s." % self.value
-		else:
-			return "Not logging trace stream."
-	def get_show_string(self, svalue):
-		if self.value:
-			return "Logging trace stream to %s." % self.value
-		else:
-			return "Not logging trace stream."
-	def write(self, event):
-		if self.value:
-			self.logfile.write(event)
-			self.logfile.flush()
-		if tpa_echo.value or not self.value:
-			gdb.write(event)
-tpa_log = ParameterTpaLog()
 
 class ParameterTpaTraceExceptions(gdb.Parameter):
 	def __init__(self):
