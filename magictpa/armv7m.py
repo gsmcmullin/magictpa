@@ -24,21 +24,21 @@ class ARMv7M(object):
 		self._inf = inferior
 
 		# FIXME: What is this and where is it documented?
-		inferior_write_reg(self._inf, 0xE0000FB0, 0xC5ACCE55) 
+		inferior_write_reg(self._inf, 0xE0000FB0, 0xC5ACCE55)
 
 		self.DWT = DWT(self._inf)
 		self.TPIU = TPIU(self._inf)
 		self.ITM = ITM(self._inf)
 		self.DBGMCU = DBGMCU(self._inf)
 		self.capture = None
-	
+
 	def trace_init(self, capture):
 		"""Enable trace port in Manchester mode"""
 		self.TPIU.SPPR = TPIU_SPPR_ASYNC_MANCHESTER
 		self.TPIU.ACPR = 0x0010
 		self.TPIU.CSPSR = TPIU_CSPSR_BYTE
 		self.TPIU.FFCR = 0 # Disable formatter
-		
+
 		self.DBGMCU.CR = (
 			DBGMCU_CR_TRACE_IOEN | DBGMCU_CR_TRACE_MODE_ASYNC
 		)
@@ -65,7 +65,7 @@ class ARMv7M(object):
 		else:
 			time = str(dec.time)
 		cb(time, fnnames[fn], exc)
-		
+
 	def trace_exc(self, callback):
 		if callback is None:
 			self.DWT.CTRL &= ~DWT_CTRL_EXCTRCENA
@@ -76,16 +76,16 @@ class ARMv7M(object):
 			raise TypeError("Callback must be callable")
 
 		self.DWT.CTRL |= DWT_CTRL_EXCTRCENA
-		self.capture.register_opcode(0x0E, 0xFF, 
+		self.capture.register_opcode(0x0E, 0xFF,
 				lambda d, o, v: self._exc_trace(d, v, callback))
-		
+
 
 class TraceWatch(object):
 	def __init__(self, dev, addr, size, func):
 		"""Find and set up a watchpoint comparator"""
 		found = None
 		for i in range(0, dev.DWT.numcomp):
-			if dev.DWT.FUNC[i] & 0xF == 0: 
+			if dev.DWT.FUNC[i] & 0xF == 0:
 				found = i
 				break
 		if found is None:
@@ -101,7 +101,7 @@ class TraceWatch(object):
 
 		self._dev = dev
 		self._wp_pc = {}
-		
+
 	def connect(self, callback):
 		cap = self._dev.capture
 		if callback:
@@ -178,7 +178,7 @@ class MMIO(object):
 				return inferior_read_reg(self._inf, t)
 		else:
 			return self.__dict__[name]
-	
+
 class TPIU(MMIO):
 	"""Trace Port Interface Unit"""
 	regs = {
