@@ -36,10 +36,19 @@ from magictpa.tpacapture import capture
 from magictpa.tpacommands import tpa_log
 
 # We really need to do this when notified of a new inforior.
-# This functionality doesn't yet exist in GDB.
-inferior = gdb.selected_inferior()
-cm3 = magictpa.armv7m.ARMv7M(inferior)
+cm3 = magictpa.armv7m.ARMv7M(gdb.selected_inferior())
 cm3.trace_init(capture)
+
+def inferior_created_cb(event):
+	print "New inferior!"
+	cm3 = magictpa.armv7m.ARMv7M(event.inferior)
+	cm3.trace_init(capture)
+
+try:
+	gdb.events.created.connect(inferior_created_cb)
+except:
+	# This functionality doesn't yet exist in GDB.
+	pass
 
 class ParameterTpaSpeed(gdb.Parameter):
 	def __init__(self):
@@ -146,3 +155,18 @@ class CommandTpaDelete(gdb.Command):
 		del tpa_watch.watches[i]
 
 tpa_delete = CommandTpaDelete()
+
+class CommandTpaStim(gdb.Command):
+	"""Trace ITM Stimulus"""
+	def __init__(self):
+		gdb.Command.__init__(self, "tpa stim", gdb.COMMAND_SUPPORT)
+
+	def _trigger(self, channel, value):
+		tpa_log.write("STIM %d: %s" % (channel, value))
+
+	def invoke(self, args, from_tty):
+		argv = gdb.string_to_argv(args)
+		cm3.trace_stim(int(argv[0]), self._trigger)
+
+tpa_stim = CommandTpaStim()
+

@@ -31,6 +31,7 @@ class ARMv7M(object):
 		self.ITM = ITM(self._inf)
 		self.DBGMCU = DBGMCU(self._inf)
 		self.capture = None
+		self.stimbuf = {}
 
 	def trace_init(self, capture):
 		"""Enable trace port in Manchester mode"""
@@ -78,6 +79,28 @@ class ARMv7M(object):
 		self.DWT.CTRL |= DWT_CTRL_EXCTRCENA
 		self.capture.register_opcode(0x0E, 0xFF,
 				lambda d, o, v: self._exc_trace(d, v, callback))
+
+	def _stim_trace(self, opcode, value, cb):
+		channel = opcode >> 5
+		value = chr(value)
+		self.stimbuf[channel] += value
+		if value == '\n':
+			cb(channel, self.stimbuf[channel])
+			self.stimbuf[channel] = ''
+
+	def trace_stim(self, channel, callback):
+		if callback is None:
+			self.ITM.TER &= ~(1 << channel)
+			self.capture.unregister_opcode((channel << 3) | 0x01, 0xFF)
+			return
+
+		if not callable(callback):
+			raise TypeError("Callback must be callable")
+
+		self.stimbuf[channel] = ''
+		self.ITM.TER |= 1 << channel
+		self.capture.register_opcode((channel << 3) | 0x01, 0xFF,
+				lambda d, o, v: self._stim_trace(o, v, callback))
 
 
 class TraceWatch(object):
@@ -223,6 +246,7 @@ DWT_FUNC_FUNC_WRITE = 0x6
 class ITM(MMIO):
 	"""Instrumentation and Trace Macrocell"""
 	regs = {
+		'TER': 0xE0000E00,
 		'TCR': 0xE0000E80,
 	}
 # ITM bit definitions
